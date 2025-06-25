@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+
+# Bundled output files - DO NOT TRACK
+context_files/
