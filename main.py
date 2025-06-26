@@ -1,41 +1,59 @@
-# main.py (Updated with argparse)
+# main.py (Updated with unique filename logic)
 import sys
 import os
 import datetime
-import argparse # Import the argparse library
+import argparse
+
 from bundler.core import bundle_project
+
+# --- NEW HELPER FUNCTION ---
+def get_unique_filepath(proposed_path):
+    """
+    Checks if a file path exists. If it does, appends an incrementing
+    counter (_2, _3, etc.) until a unique path is found.
+    """
+    if not os.path.exists(proposed_path):
+        return proposed_path
+
+    # Separate the directory, filename, and extension
+    directory = os.path.dirname(proposed_path)
+    filename, extension = os.path.splitext(os.path.basename(proposed_path))
+    
+    counter = 2
+    while True:
+        # Create a new filename with the counter
+        new_filename = f"{filename}_{counter}{extension}"
+        new_filepath = os.path.join(directory, new_filename)
+        
+        if not os.path.exists(new_filepath):
+            return new_filepath
+        
+        counter += 1
+# -------------------------
+
 
 def run():
     """The main entry point for the script, now using argparse."""
 
-    # 1. Create the parser
     parser = argparse.ArgumentParser(
         description="Rosetta Assembler: A context bundler for AI development."
     )
 
-    # 2. Add the arguments
-    #    This is our required positional argument.
     parser.add_argument(
         "project_path",
         type=str,
         help="The path to the project directory you want to bundle."
     )
     
-    #    This is our optional argument for the output file.
-    #    '--output' is the long name, '-o' is the short name.
     parser.add_argument(
         "-o", "--output",
         type=str,
         help="The path to the output bundle file. If not specified, a default name will be used."
     )
 
-    # 3. Parse the arguments from the command line
     args = parser.parse_args()
-
-    # The rest of our logic now uses the 'args' object instead of sys.argv
     project_path = args.project_path
 
-    # --- The validation logic remains the same ---
     if not os.path.exists(project_path):
         print(f"Error: The path '{project_path}' does not exist.")
         sys.exit(1)
@@ -48,25 +66,25 @@ def run():
 
     bundle_content = bundle_project(project_path)
     
-    # --- The output file logic now checks for the optional argument ---
     if args.output:
-        # User specified an output file
-        output_filepath = args.output
-        # Ensure the directory for the custom output file exists
-        output_dir = os.path.dirname(output_filepath)
+        initial_filepath = args.output
+        output_dir = os.path.dirname(initial_filepath)
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
     else:
-        # Use the default naming convention
         project_name = os.path.basename(os.path.abspath(project_path))
         today_date = datetime.date.today().strftime('%Y_%m_%d')
         output_filename = f"{today_date}_{project_name}_bundle.txt"
         
         output_dir = "context_files"
         os.makedirs(output_dir, exist_ok=True)
-        output_filepath = os.path.join(output_dir, output_filename)
+        initial_filepath = os.path.join(output_dir, output_filename)
 
-    # --- Writing the file and the final message remain the same ---
+    # --- MODIFIED SECTION ---
+    # Use our new helper function to get a unique path
+    output_filepath = get_unique_filepath(initial_filepath)
+    # ----------------------
+
     with open(output_filepath, 'w', encoding='utf-8') as f:
         f.write(bundle_content)
 
