@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rosetta-assembler"
+version = "1.0.0"
+authors = [
+    { name = "Your Name", email = "you@example.com" },
+]
+description = "A context bundler for AI development."
+readme = "README.md"
+requires-python = ">=3.8"
+# CORRECTED: Use a simple SPDX string for the license.
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    # REMOVED: The redundant license classifier.
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pathspec",
+]
+
+[project.scripts]
+# CORRECTED: Tell the script where to find main.py inside the src folder.
+rosetta-assembler = "main:run"
+
+# NEW SECTION: Tell setuptools to find packages inside the 'src' directory.
+[tool.setuptools.packages.find]
+where = ["src"]

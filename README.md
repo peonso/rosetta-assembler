@@ -31,18 +31,20 @@ Rosetta Assembler automates this process. It intelligently walks through a proje
 
 ```
 rosetta-assembler/
-├── bundler/
-│   ├── __init__.py
-│   ├── core.py
-│   ├── file_handler.py
-│   ├── filter.py
-│   └── utils.py
+├── src/
+│   ├── bundler/
+│   │   ├── __init__.py
+│   │   ├── core.py
+│   │   ├── ... (etc.)
+│   ├── config.py
+│   └── main.py
+│
 ├── context_files/
-│   └── .gitignore
-├── config.py
-├── main.py
+├── tests/
 ├── .gitignore
+├── pyproject.toml
 ├── README.md
+└── requirements-dev.txt
 └── requirements.txt
 ```
 
