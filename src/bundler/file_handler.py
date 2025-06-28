@@ -1,10 +1,10 @@
-# src/bundler/file_handler.py (Synchronized Version)
+# src/bundler/file_handler.py (Corrected Culling Logic)
 import os
 from pathspec import PathSpec
 from config import GLOBAL_IGNORE_PATTERNS
 
 def load_gitignore_patterns(root_path):
-    # ... (this function is unchanged)
+    # This function is correct and unchanged
     gitignore_patterns = set()
     for dirpath, _, filenames in os.walk(root_path):
         if '.gitignore' in filenames:
@@ -23,7 +23,6 @@ def load_gitignore_patterns(root_path):
             except Exception as e:
                 print(f"Warning: Could not read or parse {gitignore_path}: {e}")
     return gitignore_patterns
-
 
 def get_all_files(root_dir, include_patterns, exclude_patterns, focus_patterns, target_size_bytes, max_files, max_depth):
     abs_root_dir = os.path.abspath(root_dir)
@@ -59,29 +58,50 @@ def get_all_files(root_dir, include_patterns, exclude_patterns, focus_patterns, 
                     except OSError:
                         continue
     
-    # Step 2: Prioritize files if a focus is specified.
+    # Step 2: Separate files into focused and non-focused lists.
+    focused_files = []
+    other_files = []
     if focus_spec:
-        focused_files = [f for f in candidate_files if focus_spec.match_file(os.path.relpath(f[0], abs_root_dir).replace(os.sep, '/'))]
-        other_files = [f for f in candidate_files if not focus_spec.match_file(os.path.relpath(f[0], abs_root_dir).replace(os.sep, '/'))]
-        sorted_candidates = focused_files + other_files
+        for file_path, file_size in candidate_files:
+            relative_path = os.path.relpath(file_path, abs_root_dir).replace(os.sep, '/')
+            if focus_spec.match_file(relative_path):
+                focused_files.append((file_path, file_size))
+            else:
+                other_files.append((file_path, file_size))
+        # Sort both lists for deterministic behavior
+        focused_files.sort(key=lambda x: x[0])
+        other_files.sort(key=lambda x: x[0])
     else:
-        sorted_candidates = candidate_files
+        # If no focus, all files are "other" files
+        candidate_files.sort(key=lambda x: x[0])
+        other_files = candidate_files
 
+    # Step 3: Build the final list by adding focused files first, then others,
+    # checking the size limit at every step.
     final_files = []
     total_size = 0
-    for file_path, file_size in sorted_candidates:
-        # Use the max_files argument here
-        if len(final_files) >= max_files:
-            print(f"Warning: Reached max file limit of {max_files}. No more files will be added.")
-            break
+
+    def process_and_cull(file_list):
+        nonlocal total_size
+        for file_path, file_size in file_list:
+            if len(final_files) >= max_files:
+                print(f"Warning: Reached max file limit of {max_files}.")
+                return True # Signal to stop
             
-        if target_size_bytes and (total_size + file_size) > target_size_bytes:
-            continue
-            
-        final_files.append(file_path)
-        total_size += file_size
+            if target_size_bytes and (total_size + file_size) > target_size_bytes:
+                # This file is too big to fit, skip it and continue checking others
+                continue
+
+            final_files.append(file_path)
+            total_size += file_size
+        return False # Continue processing
+
+    if process_and_cull(focused_files):
+        return final_files # Stop if max_files limit hit in focused list
     
-    if target_size_bytes and total_size >= target_size_bytes:
-         print(f"Info: Stopped adding files to stay near target size of {target_size_bytes/1024:.2f}k.")
+    process_and_cull(other_files) # Process remaining files
+
+    if target_size_bytes and total_size > 0:
+         print(f"Info: Bundle created with total size {total_size/1024:.2f}k (target was {target_size_bytes/1024:.2f}k).")
          
     return final_files
