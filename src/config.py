@@ -2,7 +2,7 @@
 
 # A single list of .gitignore-style patterns.
 # pathspec will handle the logic for files, directories, and wildcards.
-DEFAULT_IGNORE_PATTERNS = [
+GLOBAL_IGNORE_PATTERNS = [
     # Version Control
     '.git/',
     
