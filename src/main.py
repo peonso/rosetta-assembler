@@ -14,6 +14,8 @@ except ImportError:
     handle_repo_url = None
     CACHE_DIR = None
 
+from config import MAX_TOTAL_FILES, MAX_TOTAL_SIZE_MB, MAX_DIRECTORY_DEPTH
+
 def is_url(text):
     """Checks if the provided text string is a URL."""
     return text.startswith("http://") or text.startswith("https://")
@@ -90,31 +92,54 @@ def clear_cache():
 
 def run():
     parser = argparse.ArgumentParser(
-        description="Rosetta Assembler: A context bundler for AI development."
+        description="Rosetta Assembler: A context bundler for AI development.",
+        # Add a formatter class to show default values in the help message
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    
+
+    # --- INPUT AND OUTPUT ---
     parser.add_argument(
-        "project_path",
-        type=str,
-        nargs='?',
-        default=None,
+        "project_path", type=str, nargs='?', default=None,
         help="The path to the project directory or URL you want to bundle."
     )
-    
     parser.add_argument(
-        "-o", "--output",
-        type=str,
+        "-o", "--output", type=str,
         help="The path to the output bundle file."
     )
 
+    # --- FILTERING ARGUMENTS ---
     parser.add_argument(
-        "--clear-cache",
-        action="store_true",
+        "--include", action="append", default=[],
+        help="Wildcard pattern for files to include. Can be used multiple times."
+    )
+    parser.add_argument(
+        "--exclude", action="append", default=[],
+        help="Wildcard pattern for files/directories to exclude. Can be used multiple times."
+    )
+
+    # --- LIMITS ARGUMENTS ---
+    parser.add_argument(
+        "--max-files", type=int, default=MAX_TOTAL_FILES,
+        help="Maximum number of files to include in the bundle."
+    )
+    parser.add_argument(
+        "--max-size-mb", type=int, default=MAX_TOTAL_SIZE_MB,
+        help="Maximum total size of files (in MB) to include."
+    )
+    parser.add_argument(
+        "--max-depth", type=int, default=MAX_DIRECTORY_DEPTH,
+        help="Maximum directory depth to scan."
+    )
+
+    # --- OTHER ACTIONS ---
+    parser.add_argument(
+        "--clear-cache", action="store_true",
         help="Clear the cache of cloned repositories."
     )
 
     args = parser.parse_args()
 
+    # --- The rest of the logic now uses these new args ---
     if args.clear_cache:
         clear_cache()
         sys.exit(0)
@@ -144,8 +169,16 @@ def run():
         sys.exit(1)
 
     print(f"Starting Rosetta Assembler for project: {project_path}")
-
-    bundle_content = bundle_project(project_path)
+    
+    # We now pass all the new arguments to the bundler
+    bundle_content = bundle_project(
+        project_path=project_path,
+        include_patterns=args.include,
+        exclude_patterns=args.exclude,
+        max_files=args.max_files,
+        max_size_mb=args.max_size_mb,
+        max_depth=args.max_depth
+    )
     
     if args.output:
         initial_filepath = args.output
