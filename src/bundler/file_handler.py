@@ -1,15 +1,15 @@
-# src/bundler/file_handler.py (Upgraded with .gitignore logic)
+# src/bundler/file_handler.py (Updated with safety checks)
 import os
 from pathspec import PathSpec
-from config import GLOBAL_IGNORE_PATTERNS
+# Import the new constants from config
+from config import GLOBAL_IGNORE_PATTERNS, MAX_TOTAL_FILES, MAX_TOTAL_SIZE_MB, MAX_DIRECTORY_DEPTH
 
+# ... (The load_gitignore_patterns function is unchanged)
 def load_gitignore_patterns(root_path):
     """
     Finds all .gitignore files in the directory tree and parses their patterns.
-    
-    Returns:
-        set: A set of .gitignore patterns.
     """
+    # ... (no changes here)
     gitignore_patterns = set()
     for dirpath, _, filenames in os.walk(root_path):
         if '.gitignore' in filenames:
@@ -18,25 +18,17 @@ def load_gitignore_patterns(root_path):
                 with open(gitignore_path, 'r', encoding='utf-8') as f:
                     for line in f:
                         stripped_line = line.strip()
-                        # Ignore empty lines and comments
                         if stripped_line and not stripped_line.startswith('#'):
-                            # For patterns in subdirectories, we need to make them relative
-                            # to the root_path.
-                            # Example: a pattern 'build/' in 'project/src/.gitignore'
-                            # should be treated as 'src/build/'.
                             relative_dir = os.path.relpath(dirpath, root_path)
                             if relative_dir == '.':
                                 gitignore_patterns.add(stripped_line)
                             else:
-                                # os.path.join handles path separators correctly
                                 pattern = os.path.join(relative_dir, stripped_line)
-                                # pathspec expects forward slashes
                                 gitignore_patterns.add(pattern.replace(os.sep, '/'))
             except Exception as e:
                 print(f"Warning: Could not read or parse {gitignore_path}: {e}")
 
     return gitignore_patterns
-
 
 # --- The get_all_files function is replaced with this new version ---
 def get_all_files(root_dir):
