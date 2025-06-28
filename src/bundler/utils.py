@@ -1,34 +1,44 @@
-# src/bundler/utils.py (Updated to be more efficient)
+# src/bundler/utils.py (Corrected Version)
 import os
 
 def generate_file_tree(root_dir, valid_files):
     """
-    Generates a string representation of the file tree,
-    based on the final list of files that will be included.
+    Generates a correct and efficient string representation of the file tree
+    based on the final list of included files.
     """
     tree_lines = []
     abs_root_dir = os.path.abspath(root_dir)
     
-    # Create a set of all directories that should be in the tree
-    included_dirs = {os.path.dirname(p) for p in valid_files}
-    
-    for root, dirs, files in os.walk(abs_root_dir, topdown=True):
-        # Prune directories that are not in our included set
-        dirs[:] = [d for d in dirs if os.path.join(root, d) in included_dirs]
+    # Create a dictionary to hold the tree structure
+    tree = {}
 
-        relative_root = os.path.relpath(root, abs_root_dir)
-        level = relative_root.count(os.sep) if relative_root != '.' else 0
-        indent = ' ' * 4 * level
-
-        if level == 0:
-            tree_lines.append(f"{os.path.basename(abs_root_dir)}/")
-        else:
-            tree_lines.append(f"{indent}├── {os.path.basename(root)}/")
+    for file_path in valid_files:
+        # Get path relative to the root, and split into parts
+        relative_path = os.path.relpath(file_path, abs_root_dir)
+        parts = relative_path.split(os.sep)
         
-        sub_indent = ' ' * 4 * (level + 1)
-        for f in sorted(files):
-            file_path = os.path.join(root, f)
-            if file_path in valid_files:
-                tree_lines.append(f"{sub_indent}├── {f}")
+        # Traverse the tree dictionary, creating nested dictionaries for dirs
+        current_level = tree
+        for part in parts[:-1]: # All parts except the last one (the file)
+            current_level = current_level.setdefault(part, {})
+        
+        # Add the file to the last level
+        current_level[parts[-1]] = None # Mark as a file
+
+    # Now, recursively build the string representation from the tree dictionary
+    def build_tree_string(subtree, prefix=""):
+        # Sort items to have directories first, then files
+        items = sorted(subtree.items(), key=lambda item: isinstance(item[1], dict), reverse=True)
+        for i, (name, content) in enumerate(items):
+            is_last = i == (len(items) - 1)
+            connector = "└── " if is_last else "├── "
+            tree_lines.append(f"{prefix}{connector}{name}")
+            
+            if isinstance(content, dict): # It's a directory
+                extension = "    " if is_last else "│   "
+                build_tree_string(content, prefix + extension)
+
+    tree_lines.append(f"{os.path.basename(abs_root_dir)}/")
+    build_tree_string(tree)
     
     return "\n".join(tree_lines)

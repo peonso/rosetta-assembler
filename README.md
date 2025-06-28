@@ -61,19 +61,8 @@ The output will be saved in the `context_files/` directory.
 
 ## Configuration
 
-To customize which files and directories are ignored, modify the lists within `config.py`.
+Rosetta Assembler can be configured via command-line arguments.
 
-```python
-# In config.py
-IGNORE_DIRS = {
-    '__pycache__',
-    '.git',
-    'node_modules',
-}
-
-IGNORE_EXTENSIONS = {
-    '.png',
-    '.jpg',
-    '.jpeg',
-}
-```
+*   Use `--include` and `--exclude` to provide custom wildcard patterns for filtering files.
+*   Use `--max-files`, `--max-depth`, and `--target-size` to control the scope and size of the analysis.
+*   Run `rosetta-assembler --help` for a full list of all available options and their default values.
