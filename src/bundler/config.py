@@ -1,94 +1,90 @@
-# src/config.py (Updated with safety limits)
+# src/bundler/config.py (Overhauled for better heuristics)
 
 # --- Safety Limits ---
-# Stop processing if more than this many files are found.
 MAX_TOTAL_FILES = 10000 
-# Stop processing if the total size of all file contents exceeds this value in Megabytes.
 MAX_TOTAL_SIZE_MB = 500
-# Stop walking directories that are deeper than this level.
 MAX_DIRECTORY_DEPTH = 20
-# --------------------
 
-# A single list of .gitignore-style patterns.
-# pathspec will handle the logic for files, directories, and wildcards.
+# --- File Handling ---
+
+# A set of common license filenames. These will be included in the
+# file tree, but their content will be omitted to save space.
+LICENSE_FILENAMES = {
+    "license", "license.md", "license.txt",
+    "copying", "copying.md", "copying.txt",
+}
+
+# NEW: A dictionary of fingerprints to identify common licenses by content.
+# The value is a unique string likely to be found in the license file.
+LICENSE_FINGERPRINTS = {
+    "MIT License": "Permission is hereby granted, free of charge",
+    "GNU GPLv3": "GNU GENERAL PUBLIC LICENSE Version 3",
+    "GNU GPLv2": "GNU GENERAL PUBLIC LICENSE Version 2",
+    "Apache License 2.0": "Apache License, Version 2.0",
+    "BSD-3-Clause License": "Redistribution and use in source and binary forms",
+}
+
+# A single list of .gitignore-style patterns for universal ignores.
 GLOBAL_IGNORE_PATTERNS = [
     # Version Control
     '.git/',
-    
     # Python
-    '__pycache__/',
-    '*.pyc',
-    '*.pyo',
-    '*.pyd',
-    '.pytest_cache/',
-    '.mypy_cache/',
-    '.ruff_cache/',
-    'venv/',
-    '.venv/',
-    'env/',
-    
+    '__pycache__/', '*.pyc', '*.pyo', '*.pyd',
+    '.pytest_cache/', '.mypy_cache/', '.ruff_cache/',
+    'venv/', '.venv/', 'env/',
     # Node.js
     'node_modules/',
-    'package-lock.json',
-    'yarn.lock',
-    
     # Build artifacts
-    'build/',
-    'dist/',
-    'target/',
-    '*.egg-info/',
-
+    'build/', 'dist/', 'target/', '*.egg-info/',
     # IDEs and Editors
-    '.vscode/',
-    '.idea/',
-    '*.suo',
-    '*.user',
-
+    '.vscode/', '.idea/', '*.suo', '*.user',
     # Logs and temporary files
-    '*.log',
-    '*.tmp',
-    '*.bak',
-    '*.swp',
-
+    '*.log', '*.tmp', '*.bak', '*.swp',
     # OS-specific
-    '.DS_Store',
-    'Thumbs.db',
-
-    # Common media formats we don't want to read
-    '*.png',
-    '*.jpg',
-    '*.jpeg',
-    '*.gif',
-    '*.ico',
-    '*.svg',
-    '*.pdf',
-    '*.zip',
+    '.DS_Store', 'Thumbs.db',
 ]
 
 # --- Heuristic Scoring Configuration ---
-# Scores are added to files based on these rules to determine importance.
-# Higher scores are prioritized when culling for --target-size.
 
-FILENAME_SCORES = {
-    "readme.md": 100,
-    "pyproject.toml": 80,
-    "package.json": 80,
-    "go.mod": 80,
-    "pom.xml": 80,
-    "main.py": 50,
-    "app.py": 50,
-    "index.js": 50,
-    "__init__.py": 20, # Important for package structure
-    "license": 10,
-    "contributing.md": 10,
+# Scores based on file extension.
+EXTENSION_SCORES = {
+    # Core Source Code (High Score)
+    ".cpp": 40, ".hpp": 40, ".h": 40, ".c": 40, ".cc": 40, ".hh": 40,
+    ".java": 40, ".cs": 40, ".go": 40, ".rs": 40, ".py": 35, ".js": 30,
+    ".ts": 30, ".rb": 30, ".php": 30, ".swift": 30, ".kt": 30,
+    # Build & Config (High Score)
+    ".cmake": 50, ".json": 15, ".toml": 20, ".yaml": 20, ".yml": 20,
+    ".xml": -5,
+    # Scripts (Neutral)
+    ".sh": 5, ".bat": 5, ".ps1": 5,
+    # Data/Text (Low Score)
+    ".sql": -5, ".csv": -10, ".txt": -15, ".md": -15, ".lua": -10,
 }
 
+# Scores based on specific filenames (case-insensitive).
+FILENAME_SCORES = {
+    # Build systems
+    "cmakelists.txt": 95, "makefile": 90, "pom.xml": 90,
+    "dockerfile": 85, "docker-compose.yml": 85, "build.gradle": 85,
+    "package.json": 80, "go.mod": 80, "pyproject.toml": 80,
+    "requirements.txt": 70, "config.lua.dist": 60,
+    # High-level documentation
+    "readme.md": 100, "readme": 100,
+    "contributing.md": 40, "contributing": 40,
+    "changelog.md": 30, "changelog": 30,
+    # Core source files
+    "main": 50, "app": 50, "index": 50,
+    "__init__.py": 20,
+}
+
+# Scores based on directory names (exact match, case-insensitive).
 DIR_SCORES = {
-    # Directory names (exact match)
-    "src": 20,
-    "lib": 20,
-    "docs": -10,
-    "examples": -10,
-    "tests": -20,
-    "test": -20,
+    # Source code is top priority
+    "src": 30, "source": 30, "lib": 20, "include": 20, "app": 15,
+    # Config and docs are secondary
+    "config": 0, "configs": 0, "docs": -10, "doc": -10, "examples": -15,
+    # Data and assets are low priority
+    "data": -30, "assets": -30, "database": -25,
+    # Tests are important but less so than src
+    "tests": -20, "test": -20,
 }

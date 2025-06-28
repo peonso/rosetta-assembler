@@ -38,17 +38,17 @@ def mock_filesystem():
         "config/settings.toml": 0,
     }
 
-    # Side effect functions that are guaranteed to receive clean, POSIX paths
-    # because the functions that call them are also mocked.
     def getsize_side_effect(path):
         relative_path = posixpath.relpath(path, base)
         return size_map[relative_path]
 
     def calculate_score_side_effect(relative_path):
-        return score_map[relative_path]
+        key = relative_path.replace(os.sep, '/')
+        return score_map[key]
 
     # Use patch.multiple to replace all necessary os and os.path functions
     # with their POSIX equivalents. This is the key to making the test stable.
+    # CRITICAL: We must also mock `is_binary_file` so it doesn't try to access the fake paths.
     with patch.multiple('os',
         walk=lambda path, topdown=True: walk_data,
         sep=posixpath.sep
@@ -58,6 +58,7 @@ def mock_filesystem():
         relpath=posixpath.relpath,
         getsize=getsize_side_effect
     ), patch('bundler.file_handler.load_gitignore_patterns', return_value=set()), \
+       patch('bundler.file_handler.is_binary_file', return_value=False), \
        patch('bundler.file_handler.calculate_importance_score', side_effect=calculate_score_side_effect):
         yield
 
@@ -84,8 +85,8 @@ def test_target_size_culling(mock_filesystem):
         max_files=100, max_depth=10
     )
     assert len(result_files) == 3
-    # Use sets for order-independent comparison
-    paths = {posixpath.basename(p) for p in result_files}
+    # Correctly extract the path from the dictionary for comparison.
+    paths = {posixpath.basename(info['path']) for info in result_files}
     assert {"README.md", "main.py", "settings.toml"} == paths
 
 def test_focus_on_with_target_size(mock_filesystem):
@@ -101,6 +102,6 @@ def test_focus_on_with_target_size(mock_filesystem):
         max_files=100, max_depth=10
     )
     assert len(result_files) == 3
-    paths = {posixpath.basename(p) for p in result_files}
+    paths = {posixpath.basename(info['path']) for info in result_files}
     assert {"README.md", "guide.md", "settings.toml"} == paths
     assert "main.py" not in paths

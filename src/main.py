@@ -1,22 +1,22 @@
-# src/main.py (Corrected Imports)
-import sys, os, datetime, argparse, shutil, time, stat, re
+# src/main.py (Updated with --output-format)
+import sys, os, datetime, argparse, shutil, time, stat, re, json
 from bundler.core import bundle_project
-from bundler.config import MAX_TOTAL_FILES, MAX_DIRECTORY_DEPTH # <-- CORRECTED
+from bundler.config import MAX_TOTAL_FILES, MAX_DIRECTORY_DEPTH
 try:
     from cloner import CACHE_DIR, handle_repo_url
 except ImportError:
     handle_repo_url = None
     CACHE_DIR = None
 
-# (All helper functions like is_url, get_unique_filepath, handle_remove_error, clear_cache are unchanged)
+# (All helper functions like is_url, get_unique_filepath, handle_remove_error, clear_cache, parse_size are unchanged)
 def is_url(text):
     return text.startswith("http://") or text.startswith("https://")
 def get_unique_filepath(proposed_path):
     if not os.path.exists(proposed_path): return proposed_path
-    directory, filename, extension = os.path.dirname(proposed_path), *os.path.splitext(os.path.basename(proposed_path))
+    directory, filename_base, extension = os.path.dirname(proposed_path), *os.path.splitext(os.path.basename(proposed_path))
     counter = 2
     while True:
-        new_filename = f"{filename}_{counter}{extension}"
+        new_filename = f"{filename_base}_{counter}{extension}"
         new_filepath = os.path.join(directory, new_filename)
         if not os.path.exists(new_filepath): return new_filepath
         counter += 1
@@ -50,6 +50,7 @@ def run():
     parser = argparse.ArgumentParser(description="Rosetta Assembler: A context bundler for AI development.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("project_path", type=str, nargs='?', default=None, help="The path to the project directory or URL.")
     parser.add_argument("-o", "--output", type=str, help="The path for the output bundle file.")
+    parser.add_argument("--output-format", choices=['txt', 'json'], default='txt', help="The output format for the bundle file.")
     parser.add_argument("--include", action="append", default=[], help="Wildcard pattern for files to ALWAYS include.")
     parser.add_argument("--exclude", action="append", default=[], help="Wildcard pattern for files/directories to exclude.")
     parser.add_argument("--focus-on", action="append", default=[], help="Wildcard pattern to prioritize when using --target-size.")
@@ -68,7 +69,6 @@ def run():
 
     project_path = args.project_path
     if is_url(project_path):
-        # ... (URL handling logic)
         try:
             project_path = handle_repo_url(project_path)
         except Exception as e:
@@ -80,14 +80,15 @@ def run():
 
     print(f"Starting Rosetta Assembler for project: {project_path}")
     
-    bundle_content = bundle_project(
+    bundle_result = bundle_project(
         project_path=project_path,
         include_patterns=args.include,
         exclude_patterns=args.exclude,
         focus_patterns=args.focus_on,
         target_size_bytes=args.target_size,
         max_files=args.max_files,
-        max_depth=args.max_depth
+        max_depth=args.max_depth,
+        output_format=args.output_format # Pass the format to the bundler
     )
     if args.output:
         initial_filepath = args.output
@@ -97,7 +98,8 @@ def run():
     else:
         project_name = os.path.basename(os.path.abspath(project_path))
         today_date = datetime.date.today().strftime('%Y_%m_%d')
-        output_filename = f"{today_date}_{project_name}_bundle.txt"
+        # Dynamically set the file extension based on the format
+        output_filename = f"{today_date}_{project_name}_bundle.{args.output_format}"
         output_dir = "context_files"
         os.makedirs(output_dir, exist_ok=True)
         initial_filepath = os.path.join(output_dir, output_filename)
@@ -105,7 +107,10 @@ def run():
     output_filepath = get_unique_filepath(initial_filepath)
 
     with open(output_filepath, 'w', encoding='utf-8') as f:
-        f.write(bundle_content)
+        if args.output_format == 'json':
+            json.dump(bundle_result, f, indent=4)
+        else:
+            f.write(bundle_result)
 
     file_size_kb = os.path.getsize(output_filepath) / 1024
     print("-" * 20)
