@@ -1,16 +1,7 @@
-# src/main.py (Synchronized Version)
-import sys
-import os
-import datetime
-import argparse
-import shutil
-import time
-import stat
-import re
-
+# src/main.py (Corrected Imports)
+import sys, os, datetime, argparse, shutil, time, stat, re
 from bundler.core import bundle_project
-from config import MAX_TOTAL_FILES, MAX_DIRECTORY_DEPTH
-
+from bundler.config import MAX_TOTAL_FILES, MAX_DIRECTORY_DEPTH # <-- CORRECTED
 try:
     from cloner import CACHE_DIR, handle_repo_url
 except ImportError:
@@ -62,7 +53,7 @@ def run():
     parser.add_argument("--include", action="append", default=[], help="Wildcard pattern for files to ALWAYS include.")
     parser.add_argument("--exclude", action="append", default=[], help="Wildcard pattern for files/directories to exclude.")
     parser.add_argument("--focus-on", action="append", default=[], help="Wildcard pattern to prioritize when using --target-size.")
-    parser.add_argument("--target-size", type=parse_size, default=None, help="Target size for the bundle (e.g., '750k', '10M').")
+    parser.add_argument("--target-size", type=parse_size, default="750k", help="Target size for the bundle (e.g., '750k', '10M').")
     parser.add_argument("--max-files", type=int, default=MAX_TOTAL_FILES, help="Maximum number of files to include.")
     parser.add_argument("--max-depth", type=int, default=MAX_DIRECTORY_DEPTH, help="Maximum directory depth to scan.")
     parser.add_argument("--clear-cache", action="store_true", help="Clear the cache of cloned repositories.")

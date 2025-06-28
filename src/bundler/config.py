@@ -64,3 +64,31 @@ GLOBAL_IGNORE_PATTERNS = [
     '*.pdf',
     '*.zip',
 ]
+
+# --- Heuristic Scoring Configuration ---
+# Scores are added to files based on these rules to determine importance.
+# Higher scores are prioritized when culling for --target-size.
+
+FILENAME_SCORES = {
+    "readme.md": 100,
+    "pyproject.toml": 80,
+    "package.json": 80,
+    "go.mod": 80,
+    "pom.xml": 80,
+    "main.py": 50,
+    "app.py": 50,
+    "index.js": 50,
+    "__init__.py": 20, # Important for package structure
+    "license": 10,
+    "contributing.md": 10,
+}
+
+DIR_SCORES = {
+    # Directory names (exact match)
+    "src": 20,
+    "lib": 20,
+    "docs": -10,
+    "examples": -10,
+    "tests": -20,
+    "test": -20,
+}
